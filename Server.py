@@ -1,13 +1,22 @@
-# Server.py
 import uvicorn
 import uuid
 import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from typing import Dict, List
 
 app = FastAPI()
 
-# ----- Helper classes -----
+# Optional: serve static folder if needed
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Serve HTML page at /
+@app.get("/")
+async def get_client():
+    return FileResponse("test_client.html")  # make sure file is in root
+
+# ----- Classes -----
 class PlayerConnection:
     def __init__(self, websocket: WebSocket, player_id: str, name: str = ""):
         self.websocket = websocket
@@ -35,17 +44,17 @@ class GameState:
             "winner": self.winner
         }
 
-# ----- In-memory storage (prototype only) -----
+# ----- In-memory storage -----
 waiting_queue: List[PlayerConnection] = []
 games: Dict[str, GameState] = {}
-player_game_map: Dict[str, str] = {}  # player_id -> game_id
+player_game_map: Dict[str, str] = {}
 
-# ----- Utility funcs -----
+# ----- Helpers -----
 def check_winner(board):
     lines = []
     for i in range(3):
-        lines.append(board[i])  # row
-        lines.append([board[0][i], board[1][i], board[2][i]])  # column
+        lines.append(board[i])
+        lines.append([board[0][i], board[1][i], board[2][i]])
     lines.append([board[0][0], board[1][1], board[2][2]])
     lines.append([board[0][2], board[1][1], board[2][0]])
     for line in lines:
@@ -59,7 +68,6 @@ async def send_json(ws: WebSocket, data: dict):
     await ws.send_json(data)
 
 # ----- WebSocket endpoint -----
-#hello
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -82,7 +90,6 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         await handle_disconnect(player)
     except Exception as e:
-        # unexpected exceptions
         try:
             await send_json(websocket, {"type":"error", "message": str(e)})
         except:
@@ -140,10 +147,9 @@ async def handle_make_move(player: PlayerConnection, msg: dict):
     for pid, info in game.players.items():
         try:
             await send_json(info["conn"].websocket, {"type":"game_update", "game": game.to_dict()})
-        except Exception:
+        except:
             pass
     if game.over:
-        # cleanup after small delay so clients receive message
         await asyncio.sleep(0.5)
         for pid in list(game.players.keys()):
             player_game_map.pop(pid, None)
@@ -175,27 +181,7 @@ async def handle_leave(player: PlayerConnection):
     games.pop(game_id, None)
 
 async def handle_disconnect(player: PlayerConnection):
-    for i, p in enumerate(waiting_queue):
-        if p.player_id == player.player_id:
-            waiting_queue.pop(i)
-            return
-    game_id = player_game_map.get(player.player_id)
-    if not game_id:
-        return
-    game = games.get(game_id)
-    if not game:
-        return
-    other_id = [pid for pid in game.players if pid != player.player_id][0]
-    game.over = True
-    game.winner = game.players[other_id]["mark"]
-    for pid, info in game.players.items():
-        try:
-            await send_json(info["conn"].websocket, {"type":"game_update", "game": game.to_dict()})
-        except:
-            pass
-    for pid in list(game.players.keys()):
-        player_game_map.pop(pid, None)
-    games.pop(game_id, None)
+    await handle_leave(player)  # reuse same logic
 
 if __name__ == "__main__":
     uvicorn.run("Server:app", host="0.0.0.0", port=8000)
