@@ -1,0 +1,6 @@
+database:
+  driver: "mysql"
+  address: "127.0.0.1:3306"
+  user: "nakama_user"
+  password: "nakama@123"
+  database: "nakama_db"

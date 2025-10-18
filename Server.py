@@ -2,20 +2,20 @@ import uvicorn
 import uuid
 import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+
 from fastapi.responses import FileResponse
 
 from typing import Dict, List
 
 app = FastAPI()
 
-# Optional: serve static folder if needed
+
 # app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Serve HTML page at /
+
 @app.get("/")
 async def get_client():
-    return FileResponse("test_client.html")  # make sure file is in root
+    return FileResponse("test_client.html")
 
 # ----- Classes -----
 class PlayerConnection:
@@ -182,7 +182,7 @@ async def handle_leave(player: PlayerConnection):
     games.pop(game_id, None)
 
 async def handle_disconnect(player: PlayerConnection):
-    await handle_leave(player)  # reuse same logic
+    await handle_leave(player)
 
 if __name__ == "__main__":
     uvicorn.run("Server:app", host="0.0.0.0", port=8000)
