@@ -1,0 +1,81 @@
+<!-- test_client.html -->
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>TicTacToe WebSocket Test</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        #board { display: grid; grid-template-columns: repeat(3, 80px); gap: 4px; margin-top: 10px;}
+        .cell { width: 80px; height: 80px; display:flex; align-items:center; justify-content:center; font-size:36px; border:1px solid #333; cursor:pointer;}
+    </style>
+</head>
+<body>
+<div>
+    <label>Name: <input id="name" value="Player"/></label>
+    <button id="connectBtn">Connect</button>
+    <button id="findBtn">Find Match</button>
+    <p id="status">Not connected</p>
+</div>
+
+<div id="board" style="display:none;"></div>
+<script>
+    let ws;
+    let playerId;
+    let myMark;
+    let currentGame;
+    document.getElementById('connectBtn').onclick = () => {
+      ws = new WebSocket('ws://' + location.hostname + ':8000/ws');
+      ws.onopen = () => { document.getElementById('status').innerText = 'Connected'; };
+      ws.onmessage = (ev) => {
+        const msg = JSON.parse(ev.data);
+        console.log('recv', msg);
+        if (msg.type === 'connected') {
+          playerId = msg.player_id;
+          document.getElementById('status').innerText = 'Connected: ' + playerId;
+        } else if (msg.type === 'waiting') {
+          document.getElementById('status').innerText = 'Waiting for opponent...';
+        } else if (msg.type === 'match_found') {
+          currentGame = msg.game;
+          myMark = msg.you.mark;
+          document.getElementById('status').innerText = 'Matched! You are ' + myMark;
+          renderBoard(currentGame.board);
+        } else if (msg.type === 'game_update') {
+          currentGame = msg.game;
+          renderBoard(currentGame.board);
+          if (currentGame.over) {
+            document.getElementById('status').innerText = 'Game over. Winner: ' + currentGame.winner;
+          } else {
+            document.getElementById('status').innerText = 'Turn: ' + currentGame.turn;
+          }
+        } else if (msg.type === 'error') {
+          alert('Error: ' + msg.message);
+        }
+      };
+    };
+
+    document.getElementById('findBtn').onclick = () => {
+      const name = document.getElementById('name').value || 'Anon';
+      ws.send(JSON.stringify({type:'find_match', name}));
+    };
+
+    function renderBoard(board) {
+      const b = document.getElementById('board');
+      b.style.display = 'grid';
+      b.innerHTML = '';
+      for (let r=0;r<3;r++){
+        for (let c=0;c<3;c++){
+          const div = document.createElement('div');
+          div.className = 'cell';
+          div.innerText = board[r][c] || '';
+          div.dataset.r = r; div.dataset.c = c;
+          div.onclick = () => {
+            ws.send(JSON.stringify({type:'make_move', row: div.dataset.r, col: div.dataset.c}));
+          };
+          b.appendChild(div);
+        }
+      }
+    }
+</script>
+</body>
+</html>
