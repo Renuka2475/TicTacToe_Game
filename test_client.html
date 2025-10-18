@@ -25,7 +25,7 @@
     let myMark;
     let currentGame;
     document.getElementById('connectBtn').onclick = () => {
-      ws = new WebSocket('ws://' + location.hostname + ':8000/ws');
+      ws = new WebSocket('ws://https://tictactoe-game-1-kd1f.onrender.com:8000/ws');
       ws.onopen = () => { document.getElementById('status').innerText = 'Connected'; };
       ws.onmessage = (ev) => {
         const msg = JSON.parse(ev.data);
