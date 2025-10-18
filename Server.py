@@ -3,13 +3,14 @@ import uuid
 import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 from typing import Dict, List
 
 app = FastAPI()
 
 # Optional: serve static folder if needed
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Serve HTML page at /
 @app.get("/")
