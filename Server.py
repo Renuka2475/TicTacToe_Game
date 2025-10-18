@@ -59,7 +59,7 @@ async def send_json(ws: WebSocket, data: dict):
     await ws.send_json(data)
 
 # ----- WebSocket endpoint -----
-@app.websocket("/")
+@app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     player_id = str(uuid.uuid4())
